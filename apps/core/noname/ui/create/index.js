@@ -2178,7 +2178,7 @@ export class Create {
 
 			const selectables = get.selectableCards();
 			// @ts-expect-error 啊至少垫片函数是接受数组的喵
-			const cards = selecteds.length ? [...new Set(selectables).difference(selecteds)] : selectables;
+			const cards = selecteds.length ? [...new Set(selectables).difference(new Set(selecteds))] : selectables;
 
 			if (cards.length <= range[1]) {
 				// 如果可以就全选喵
@@ -2245,7 +2245,7 @@ export class Create {
 
 			const selectables = get.selectableButtons();
 			// @ts-expect-error 啊至少垫片函数是接受数组的喵
-			const buttons = selecteds.length ? [...new Set(selectables).difference(selecteds)] : selectables;
+			const buttons = selecteds.length ? [...new Set(selectables).difference(new Set(selecteds))] : selectables;
 
 			if (buttons.length <= range[1]) {
 				// 如果可以就全选喵
