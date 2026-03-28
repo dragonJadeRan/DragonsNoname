@@ -451,7 +451,7 @@ export class Game {
 		}
 
 		// @ts-expect-error childNodes是可迭代的
-		const elements = new Set(parentFrom.childNodes).union(parentTo.childNodes);
+		const elements = new Set(parentFrom.childNodes).union(new Set(parentTo.childNodes));
 
 		for (const element of elements) {
 			recordAsFirstPosition(element);
@@ -471,7 +471,7 @@ export class Game {
 
 		// 然后是LAST喵，记录结束位置哦喵
 		// @ts-expect-error childNodes是可迭代的
-		const elements2 = new Set(parentFrom.childNodes).union(parentTo.childNodes);
+		const elements2 = new Set(parentFrom.childNodes).union(new Set(parentTo.childNodes));
 
 		for (const element of elements2) {
 			recordAsLastPosition(element);
