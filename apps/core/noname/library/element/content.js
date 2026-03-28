@@ -512,14 +512,15 @@ export const Content = {
 	//增加明置手牌
 	async addShownCards(event, _trigger, player) {
 		const hs = player.getCards("h");
-		const showingCards = event._cards.filter(showingCard => hs.includes(showingCard));
+		const showingCards = event.cards.filter(showingCard => hs.includes(showingCard));
 		const shown = player.getShownCards();
 
 		for (const tag of event.gaintag) {
 			player.addGaintag(showingCards, tag);
 		}
 
-		if (!(event.cards = showingCards.filter(showingCard => !shown.includes(showingCard))).length) {
+		event.cards = showingCards.filter(showingCard => !shown.includes(showingCard));
+		if (!event.cards.length) {
 			return;
 		}
 
@@ -530,7 +531,7 @@ export const Content = {
 	//隐藏明置手牌
 	async hideShownCards(event, _trigger, player) {
 		const shown = player.getShownCards();
-		const hidingCards = event._cards.filter(hidingCard => shown.includes(hidingCard));
+		const hidingCards = event.cards.filter(hidingCard => shown.includes(hidingCard));
 
 		if (!hidingCards.length) {
 			return;
@@ -543,7 +544,10 @@ export const Content = {
 		} else {
 			const map = new Map();
 			for (const hidingCard of hidingCards) {
-				for (const tag of hidingCard) {
+				for (const tag of hidingCard.gaintag) {
+					if (tag.startsWith("eternal_") && !tag.slice(8).startsWith("visible_")) {
+						continue;
+					}
 					if (!tag.startsWith("visible_")) {
 						continue;
 					}
@@ -565,7 +569,8 @@ export const Content = {
 		if (!hidingCards.length) {
 			return;
 		}
-		game.log(player, "取消明置了", (event.cards = hidingCards));
+		event.cards = hidingCards;
+		game.log(player, "取消明置了", event.cards);
 		//if (event.animate != false) player.$give(hidingCards, player, false);
 		await event.trigger("hideShownCardsAfter");
 	},
@@ -741,9 +746,9 @@ export const Content = {
 		if (get.is.mountCombined()) {
 			for (const slot of event.slots) {
 				if (slot == "equip3" || slot == "equip4") {
-					event.slotsx.add("equip3_4");
+					slots.add("equip3_4");
 				} else {
-					event.slotsx.add(slot);
+					slots.add(slot);
 				}
 			}
 		} else {
@@ -792,12 +797,12 @@ export const Content = {
 						.chooseButton(
 							[
 								"选择" +
-									(player == source ? "你" : get.translation(player)) +
-									"的" +
-									get.cnNumber(num) +
-									"张" +
-									get.translation(slot) +
-									"牌置入弃牌堆",
+								(player == source ? "你" : get.translation(player)) +
+								"的" +
+								get.cnNumber(num) +
+								"张" +
+								get.translation(slot) +
+								"牌置入弃牌堆",
 								cards,
 							],
 							true,
@@ -1267,15 +1272,15 @@ export const Content = {
 					.set(
 						"aiCard",
 						event.aiCard ??
-							(target => {
-								const getAi =
-									get.event().ai ||
-									function (card) {
-										return Math.random();
-									};
-								let hs = target.getCards("h").sort((a, b) => getAi(b) - getAi(a));
-								return { bool: true, cards: [hs[0]] };
-							})
+						(target => {
+							const getAi =
+								get.event().ai ||
+								function (card) {
+									return Math.random();
+								};
+							let hs = target.getCards("h").sort((a, b) => getAi(b) - getAi(a));
+							return { bool: true, cards: [hs[0]] };
+						})
 					);
 
 				next._args.remove("glow_result");
@@ -1607,7 +1612,7 @@ export const Content = {
 			event.dialog.textPrompt = event.dialog.add(
 				'<div class="text center">' + (beatmap.prompt || "在音符滑条和底部判定区重合时点击屏幕！") + "</div>"
 			);
-			event.switchToAuto = function () {};
+			event.switchToAuto = function () { };
 			event.dialog.classList.add("fixed");
 			event.dialog.classList.add("scroll1");
 			event.dialog.classList.add("scroll2");
@@ -1857,7 +1862,7 @@ export const Content = {
 			);
 			const mean = Math.round(
 				chooseToPlayBeatmapAccuracies.reduce((previousValue, currentValue) => previousValue + currentValue) /
-					chooseToPlayBeatmapAccuracies.length
+				chooseToPlayBeatmapAccuracies.length
 			);
 			const half_standard_deviation = Math.round(
 				Math.sqrt(
@@ -2140,7 +2145,7 @@ export const Content = {
 				 * @param { ((button: HTMLDivElement) => boolean)? } filter
 				 */
 				var clearSelected = function (filter) {
-					for (let i = ui.selected.guanxing_buttons.length; i--; ) {
+					for (let i = ui.selected.guanxing_buttons.length; i--;) {
 						const button = ui.selected.guanxing_buttons[i];
 
 						if (!filter || filter(button)) {
@@ -2694,7 +2699,7 @@ export const Content = {
 					next.set(
 						"prompt",
 						event.prompt ||
-							"是否" + (event.targets2.length ? "对" : "") + get.translation(event.targets2) + "使用" + get.translation(card) + "?"
+						"是否" + (event.targets2.length ? "对" : "") + get.translation(event.targets2) + "使用" + get.translation(card) + "?"
 					);
 					if (event.hsskill) {
 						next.setHiddenSkill(event.hsskill);
@@ -2740,15 +2745,15 @@ export const Content = {
 				next.set(
 					"filterTarget",
 					event.filterTarget ||
-						function (card, player, target) {
-							if (!_status.event.targets.includes(target)) {
-								return false;
-							}
-							if (!_status.event.nodistance && !lib.filter.targetInRange(card, player, target)) {
-								return false;
-							}
-							return lib.filter.targetEnabledx(card, player, target);
+					function (card, player, target) {
+						if (!_status.event.targets.includes(target)) {
+							return false;
 						}
+						if (!_status.event.nodistance && !lib.filter.targetInRange(card, player, target)) {
+							return false;
+						}
+						return lib.filter.targetEnabledx(card, player, target);
+					}
 				);
 				next.set("ai", event.ai || get.effect_use);
 				next.set("selectTarget", event.selectTarget || lib.filter.selectTarget);
@@ -2856,7 +2861,7 @@ export const Content = {
 			const choose = [playerChoose, targetChoose];
 			/** @type {Record<string, Partial<Result>>} */
 			const result = await player
-				.chooseButtonOL(choose, () => {}, event.ai)
+				.chooseButtonOL(choose, () => { }, event.ai)
 				.set("switchToAuto", () => {
 					_status.event.result = "ai";
 				})
@@ -2965,7 +2970,7 @@ export const Content = {
 			const result = await player
 				.chooseButtonOL(
 					choose,
-					() => {},
+					() => { },
 					() => 1 + Math.random()
 				)
 				.set("switchToAuto", () => {
@@ -3665,7 +3670,6 @@ export const Content = {
 	},
 	async addExtraTarget(event, trigger, player) {
 		const { card, targets } = event;
-		event.addedTargets = [];
 
 		const info = get.info(card);
 		for (const target of targets) {
@@ -3693,7 +3697,6 @@ export const Content = {
 				event.addedTargets.push(false);
 				result = { bool: false };
 			}
-
 			if (result.bool) {
 				event.addedTargets.push(result.targets[0]);
 				player.line2([target, result.targets[0]]);
@@ -5416,9 +5419,9 @@ export const Content = {
 					next.set(
 						"ai",
 						info.chooseButton.check ||
-							function () {
-								return 0;
-							}
+						function () {
+							return 0;
+						}
 					);
 					if (event.id) {
 						next._parent_id = event.id;
@@ -5435,16 +5438,16 @@ export const Content = {
 					next.set(
 						"ai",
 						info.chooseButton.check ||
-							function () {
-								return 1;
-							}
+						function () {
+							return 1;
+						}
 					);
 					next.set(
 						"filterButton",
 						info.chooseButton.filter ||
-							function () {
-								return true;
-							}
+						function () {
+							return true;
+						}
 					);
 					next.set("selectButton", info.chooseButton.select || 1);
 					next.set(
@@ -5702,9 +5705,9 @@ export const Content = {
 						next.set(
 							"ai",
 							info.chooseButton.check ||
-								function () {
-									return 0;
-								}
+							function () {
+								return 0;
+							}
 						);
 					} else {
 						next = player.chooseButton(dialog);
@@ -5717,16 +5720,16 @@ export const Content = {
 						next.set(
 							"ai",
 							info.chooseButton.check ||
-								function () {
-									return 1;
-								}
+							function () {
+								return 1;
+							}
 						);
 						next.set(
 							"filterButton",
 							info.chooseButton.filter ||
-								function () {
-									return true;
-								}
+							function () {
+								return true;
+							}
 						);
 						next.set("selectButton", info.chooseButton.select || 1);
 						next.set("filterOk", info.chooseButton.filterOk || (() => true));
@@ -5881,8 +5884,8 @@ export const Content = {
 			const directFilter = event.forced && typeof event.filterOk != "function" && typeof event.selectCard != "function" && !event.complexCard;
 			const cards = directFilter
 				? player
-						.getCards(event.position)
-						.filter(card => !card.classList.contains("uncheck") && lib.filter.cardAiIncluded(card) && event.filterCard(card, player))
+					.getCards(event.position)
+					.filter(card => !card.classList.contains("uncheck") && lib.filter.cardAiIncluded(card) && event.filterCard(card, player))
 				: [];
 			const range = get.select(event.selectCard);
 			if (directFilter && (range[0] >= cards.length || range[1] <= -1)) {
@@ -6072,8 +6075,8 @@ export const Content = {
 					event.forced && typeof event.filterOk != "function" && typeof event.selectCard != "function" && !event.complexCard;
 				const cards = directFilter
 					? player
-							.getCards(event.position)
-							.filter(card => !card.classList.contains("uncheck") && lib.filter.cardAiIncluded(card) && event.filterCard(card, player))
+						.getCards(event.position)
+						.filter(card => !card.classList.contains("uncheck") && lib.filter.cardAiIncluded(card) && event.filterCard(card, player))
 					: [];
 				const range = get.select(event.selectCard);
 				if (directFilter && (range[0] >= cards.length || range[1] <= -1)) {
@@ -6854,15 +6857,15 @@ export const Content = {
 					.set("type", "compare")
 					.set("ai", event.ai)
 					.set("source", player).aiCard = function (target) {
-					var hs = target.getCards("h");
-					var event = _status.event;
-					event.player = target;
-					hs.sort(function (a, b) {
-						return event.ai(b) - event.ai(a);
-					});
-					delete event.player;
-					return { bool: true, cards: [hs[0]] };
-				};
+						var hs = target.getCards("h");
+						var event = _status.event;
+						event.player = target;
+						hs.sort(function (a, b) {
+							return event.ai(b) - event.ai(a);
+						});
+						delete event.player;
+						return { bool: true, cards: [hs[0]] };
+					};
 			}
 		},
 		async (event, trigger, player, result) => {
@@ -7077,15 +7080,15 @@ export const Content = {
 					.set("type", "compare")
 					.set("ai", event.ai)
 					.set("source", player).aiCard = function (target) {
-					var hs = target.getCards("h");
-					var event = _status.event;
-					event.player = target;
-					hs.sort(function (a, b) {
-						return event.ai(b) - event.ai(a);
-					});
-					delete event.player;
-					return { bool: true, cards: [hs[0]] };
-				};
+						var hs = target.getCards("h");
+						var event = _status.event;
+						event.player = target;
+						hs.sort(function (a, b) {
+							return event.ai(b) - event.ai(a);
+						});
+						delete event.player;
+						return { bool: true, cards: [hs[0]] };
+					};
 			}
 		},
 		async (event, trigger, player, result) => {
@@ -7275,13 +7278,13 @@ export const Content = {
 					.set("type", "compare")
 					.set("ai", event.ai)
 					.set("source", player).aiCard = function (target) {
-					var hs = target.getCards("h");
-					var event = _status.event;
-					event.player = target;
-					hs.sort((a, b) => event.ai(b) - event.ai(a));
-					delete event.player;
-					return { bool: true, cards: [hs[0]] };
-				};
+						var hs = target.getCards("h");
+						var event = _status.event;
+						event.player = target;
+						hs.sort((a, b) => event.ai(b) - event.ai(a));
+						delete event.player;
+						return { bool: true, cards: [hs[0]] };
+					};
 			}
 		},
 		async (event, trigger, player, result) => {
@@ -7608,10 +7611,10 @@ export const Content = {
 					}
 					const item = dialog.add(
 						'<div class="popup pointerdiv" style="width:80%;display:inline-block"><div class="skill">【' +
-							translation +
-							"】</div><div>" +
-							lib.translate[skill + "_info"] +
-							"</div></div>"
+						translation +
+						"】</div><div>" +
+						lib.translate[skill + "_info"] +
+						"</div></div>"
 					);
 					item.firstChild.addEventListener("click", clickItem(skill));
 					item.firstChild.link = skill;
@@ -8024,7 +8027,7 @@ export const Content = {
 						}
 					});
 				})
-			).catch(() => {});
+			).catch(() => { });
 			game.broadcastAll("cancel", eventId);
 		}
 		if (locals.length > 0) {
@@ -8370,22 +8373,23 @@ export const Content = {
 							replace: {},
 						};
 					}
-					if (event.custom.add.confirm == undefined) {
-						//如果有人canHidden是true然后还动了这部分请把一部分代码复制过去适配一下，不然隐藏的按钮不会关闭
-						event.custom.add.confirm = function (bool) {
-							if (bool != true) {
-								return;
-							}
-							const event = get.event();
-							if (event.controls) {
-								event.controls.forEach(i => i.close());
-							}
-							if (ui.confirm) {
-								ui.confirm.close();
-							}
-							game.uncheck();
-						};
-					}
+					const addConfirm = event.custom.add.confirm;
+					event.custom.add.confirm = function (bool) {
+						if (typeof bool != "boolean") {
+							return;
+						}
+						const event = get.event();
+						if (event.controls) {
+							event.controls.forEach(i => i.close());
+						}
+						if (ui.confirm) {
+							ui.confirm.close();
+						}
+						if (typeof addConfirm == "function") {
+							addConfirm.call(this, bool);
+						}
+						game.uncheck();
+					};
 				}
 				ui.create.buttonChooseAll();
 				game.check();
@@ -8579,9 +8583,9 @@ export const Content = {
 						for (let i = 0; i < event.choiceList.length; i++) {
 							event.dialog.add(
 								'<div class="popup text" style="width:calc(100% - 10px);display:inline-block">' +
-									(event.displayIndex !== false ? "选项" + get.cnNumber(i + 1, true) + "：" : "") +
-									event.choiceList[i] +
-									"</div>"
+								(event.displayIndex !== false ? "选项" + get.cnNumber(i + 1, true) + "：" : "") +
+								event.choiceList[i] +
+								"</div>"
 							);
 						}
 					} else if (event.prompt) {
@@ -8723,32 +8727,32 @@ export const Content = {
 			next.set(
 				"ai",
 				event.ai ||
-					function () {
-						const player = get.player();
-						const { target, num1, num2 } = get.event().getParent();
-						const att = get.attitude(player, target);
-						const choices = get.event().controls.slice();
-						const eff1 = get.recoverEffect(target, player, player);
-						const eff2 = get.effect(target, { name: "draw" }, player, player) * 2;
-						if (
-							choices.includes("recover_hp") &&
-							eff1 > 0 &&
-							(target.hp == 1 ||
-								target.needsToDiscard() ||
-								target.hasSkillTag("maixie_hp") ||
-								num2 > num1 ||
-								(num2 == num1 && target.needsToDiscard(1)))
-						) {
-							return "recover_hp";
-						}
-						if (eff2 > 0) {
-							return "draw_card";
-						}
-						if (choices.includes("cancel2") && att <= 0) {
-							return "cancel2";
-						}
-						return choices.randomGet();
+				function () {
+					const player = get.player();
+					const { target, num1, num2 } = get.event().getParent();
+					const att = get.attitude(player, target);
+					const choices = get.event().controls.slice();
+					const eff1 = get.recoverEffect(target, player, player);
+					const eff2 = get.effect(target, { name: "draw" }, player, player) * 2;
+					if (
+						choices.includes("recover_hp") &&
+						eff1 > 0 &&
+						(target.hp == 1 ||
+							target.needsToDiscard() ||
+							target.hasSkillTag("maixie_hp") ||
+							num2 > num1 ||
+							(num2 == num1 && target.needsToDiscard(1)))
+					) {
+						return "recover_hp";
 					}
+					if (eff2 > 0) {
+						return "draw_card";
+					}
+					if (choices.includes("cancel2") && att <= 0) {
+						return "cancel2";
+					}
+					return choices.randomGet();
+				}
 			);
 			result = await next.forResult();
 		}
@@ -9088,6 +9092,10 @@ export const Content = {
 				}
 			}
 			if (event.dialog.buttons.length == 0) {
+				event.result = {
+					bool: false,
+				}
+				event.dialog.close();
 				event.finish();
 				return;
 			}
@@ -9313,6 +9321,9 @@ export const Content = {
 			}
 
 			if (event.dialog.buttons.length == 0) {
+				event.result = {
+					bool: false,
+				}
 				event.dialog.close();
 				event.finish();
 				return;
@@ -9421,7 +9432,7 @@ export const Content = {
 
 		const cards = player.getCards("h");
 		const next = player.showCards(cards);
-		next.setContent(function () {});
+		next.setContent(function () { });
 
 		let str = get.translation(player.name) + "的手牌";
 		if (typeof event.prompt == "string") {
@@ -9446,7 +9457,7 @@ export const Content = {
 		event.dialog.close();
 	},
 	showCards: async function (event, trigger, player) {
-		const { cards, str, flashAnimation, triggeronly } = event;
+		const { cards, str, flashAnimation, triggeronly, isFlash, multipleShow } = event;
 		if (get.itemtype(cards) != "cards") {
 			return event.finish();
 		}
@@ -9463,7 +9474,7 @@ export const Content = {
 		await event.trigger("showCards");
 
 		if (get.itemtype(cards) != "cards") {
-			return event.finish();
+			return;
 		}
 
 		//确定要展示的牌
@@ -9521,6 +9532,22 @@ export const Content = {
 		//仅触发时机，不做后续处理
 		if (triggeronly) {
 			return;
+		}
+
+		//这部分是处理将牌置入处理区的，一般只有亮出才会置入
+		if (!event.noOrdering && isFlash) {
+			//有noOrdering属性亮出牌就不会把牌丢进处理区
+			//showCards的relatedEvent属性是牌要在某个特定事件之后进入弃牌堆的，比如一些需要多次亮出牌的，因为多个展示牌事件独立，不set的话会在展示牌事件结束后就置入弃牌堆
+			if (Array.from(ownerLose.values())?.flat()?.length > 0) {
+				const next = game
+					.loseAsync({ lose_list: Array.from(ownerLose.entries()) })
+					.set("relatedEvent", event.relatedEvent || event.getParent());
+				next.setContent("chooseToCompareLose");
+				await next;
+			}
+			if (directLose.length > 0) {
+				await game.cardsGotoOrdering(directLose).set("relatedEvent", event.relatedEvent || event.getParent());
+			}
 		}
 
 		//展示牌的动画
@@ -9581,7 +9608,7 @@ export const Content = {
 				}
 				//dialog.style.display = "";
 			};
-			const customButton = event.customButton || function () {};
+			const customButton = event.customButton || function () { };
 			//创建对话框
 			createDialog(event.hiddencards, event.videoId, customButton);
 			game.broadcast(
@@ -9593,48 +9620,10 @@ export const Content = {
 				event.videoId,
 				customButton
 			);
-			const cards2 = cards.slice(0);
-			if (event.hiddencards) {
-				cards2.removeArray(event.hiddencards);
-			}
-			//处理历史记录的log，允许自定义log的内容，log函数参数为对应角色要展示的牌cards和角色player
-			if (event.log != false) {
-				if (get.itemtype(event.showers) !== "players") {
-					const logList = event.log?.(cards2, player) || [player, "展示了", cards2];
-					game.log(...logList);
-				} else {
-					const targets = event.showers.concat(Array.from(ownerLose.keys()));
-					for (const target of targets.unique().sortBySeat()) {
-						const cardsx = ownerLose.get(target)?.filter(card => !event.hiddenCards?.includes(card));
-						if (cardsx?.length) {
-							const logList = event.log?.(cardsx, target) || [target, "展示了", cardsx];
-							game.log(...logList);
-						}
-					}
-					if (directLose.length) {
-						const logList = event.log?.(directLose, player) || [player, "展示了", directLose];
-						game.log(...logList);
-					}
-				}
-			}
+			//处理历史记录的log
 			game.addVideo("showCards", player, [event.str, get.cardsInfo(cards)]);
 		} else {
 			event.videoId = lib.status.videoId++;
-			//这部分是处理亮出牌的，动画效果类似判定，需要另外处理
-			if (!event.noOrdering) {
-				//有noOrdering属性亮出牌就不会把牌丢进处理区
-				//showCards的relatedEvent属性是牌要在某个特定事件之后进入弃牌堆的，比如一些需要多次亮出牌的，因为多个展示牌事件独立，不set的话会在展示牌事件结束后就置入弃牌堆
-				if (Array.from(ownerLose.values())?.flat()?.length > 0) {
-					const next = game
-						.loseAsync({ lose_list: Array.from(ownerLose.entries()) })
-						.set("relatedEvent", event.relatedEvent || event.getParent());
-					next.setContent("chooseToCompareLose");
-					await next;
-				}
-				if (directLose.length > 0) {
-					await game.cardsGotoOrdering(directLose).set("relatedEvent", event.relatedEvent || event.getParent());
-				}
-			}
 			for (const card of cards) {
 				game.addVideo("judge1", player, [get.cardInfo(card), event.str, event.videoId]);
 			}
@@ -9674,13 +9663,39 @@ export const Content = {
 				event.videoId,
 				cards.map(i => get.id())
 			);
-			if (event.log != false) {
-				const logList = event.log?.(cards, player) || [player, "亮出了", cards];
+		}
+
+		//允许自定义log的内容，log函数参数为对应角色要展示的牌cards和角色player
+		const cards2 = cards.slice(0);
+		if (event.hiddencards && !isFlash) {
+			cards2.removeArray(event.hiddencards);
+		}
+		if (event.log != false) {
+			const str = isFlash ? "亮出了" : "展示了";
+			//multipleShow属性是表示是否有多个展示牌的角色的意思
+			if (multipleShow !== true) {
+				const logList = event.log?.(cards2, player) || [player, str, cards2];
 				game.log(...logList);
+			} else {
+				const targets = Array.from(ownerLose.keys());
+				for (const target of targets.sortBySeat()) {
+					const cardsx = ownerLose.get(target)?.filter(card => !event.hiddenCards?.includes(card));
+					if (cardsx?.length) {
+						const logList = event.log?.(cardsx, target) || [target, str, cardsx];
+						game.log(...logList);
+					}
+				}
+				if (directLose.length) {
+					const logList = event.log?.(directLose, player) || [player, str, directLose];
+					game.log(...logList);
+				}
 			}
 		}
+		//添加知情者
 		game.addCardKnower(cards, "everyone");
-		await game.delayx(event.delay_time || 2.5);
+		//增加延迟，允许自定义
+		const delay = Math.max(2, Math.min(5, cards.length));
+		await game.delayx(event.delay_time || delay);
 
 		//关闭对话框，结束动画
 		if (!flashAnimation) {
@@ -9730,6 +9745,7 @@ export const Content = {
 				await new Promise(resolve => {
 					ui.create.confirm("o", resolve);
 				});
+				ui?.confirm?.close();
 			} else {
 				event.result = "viewed";
 				const wait = delay(2 * lib.config.duration).then(() => {
@@ -9884,7 +9900,7 @@ export const Content = {
 										get.value(es[i], target) > 0 &&
 										current.canEquip(es[i], _status.event.canReplace) &&
 										get.effect(current, es[i], player, player) >
-											(_status.event.canReplace ? get.effect(target, es[i], player, player) : 0)
+										(_status.event.canReplace ? get.effect(target, es[i], player, player) : 0)
 									) {
 										return true;
 									}
@@ -9966,8 +9982,8 @@ export const Content = {
 			const js = event.nojudge
 				? []
 				: targets[0].getCards("j", card => {
-						return event.filter(card) && targets[1].canAddJudge(card);
-					});
+					return event.filter(card) && targets[1].canAddJudge(card);
+				});
 			if (es.length) {
 				dialogArgs.push(`<div class="text center">装备区</div>`);
 				dialogArgs.push([es, "vcard"]);
@@ -10185,12 +10201,15 @@ export const Content = {
 							throw_cards = [virtualCard];
 							throws.add(virtualCard);
 						}
+						if (lib.config.card_animation_info) {
+							throws.addArray(event.lose_map.noowner);
+						};
 					}
 					if (throws.length) {
 						owner.$throw(throws);
 					}
 				}
-				if (event.lose_map.noowner.length) {
+				if (event.lose_map.noowner.length&&!lib.config.card_animation_info) {
 					for (const card of event.lose_map.noowner) {
 						game.broadcastAll(
 							function (player, card, cardid) {
@@ -11346,12 +11365,15 @@ export const Content = {
 							throw_cards = [virtualCard];
 							throws.add(virtualCard);
 						}
+						if (lib.config.card_animation_info) {
+							throws.addArray(event.lose_map.noowner);
+						};
 					}
 					if (throws.length) {
 						owner.$throw(throws);
 					}
 				}
-				if (event.lose_map.noowner.length) {
+				if (event.lose_map.noowner.length&&!lib.config.card_animation_info) {
 					for (const card of event.lose_map.noowner) {
 						game.broadcastAll(
 							function (player, card, cardid) {
@@ -12692,6 +12714,11 @@ export const Content = {
 	},
 	async loseMaxHp(event) {
 		const { player, num } = event;
+		game.broadcastAll(function () {
+			if (lib.config.background_audio) {
+				game.playAudio("effect", "loseMaxHp");
+			}
+		});
 		game.log(player, "减少了" + get.cnNumber(num) + "点体力上限");
 		player.maxHp -= num;
 		if (isNaN(player.maxHp)) {
@@ -12763,7 +12790,7 @@ export const Content = {
 				event.num = num;
 			}
 			switch (
-				event.type //log moved here
+			event.type //log moved here
 			) {
 				case "damage":
 					game.log(player, "的护甲抵挡了" + get.cnNumber(-num) + "点伤害");

@@ -77,7 +77,7 @@ declare type GameHistory = import('@/game/index.js').GameHistory;
 
 declare type Sex = 'male' | 'female' | 'dobule' | 'none';
 declare type Character = [Sex, string, number | string, string[], string[]] | [Sex, string, number | string, string[]] | import('@/library/element/character.js').Character;
-declare type Select = [number, number];
+declare type Select = [begin: number, end: number];
 
 declare interface progress extends HTMLDivElement {
     /** 获取标题 */
@@ -730,6 +730,8 @@ declare interface PackageData {
     forumURL?: string,
     /** 扩展版本 */
     version?: string,
+    /** 扩展在UI中显示的名字 */
+    translation?:string;
 
     /** 武将导入信息 */
     character?: {
@@ -931,7 +933,6 @@ type Stat = {
     kill?: number;
     /** 使用技能次数（不区分统一计数） */
     allSkills?: number;
-
 }
 
 declare interface menuData {
@@ -964,4 +965,4 @@ declare interface menuData {
     ): void;
     /** 右方html模板 */
     rightPaneTemplate: import("vue").Component;
-  }
+}
