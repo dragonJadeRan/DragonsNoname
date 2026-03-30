@@ -2177,7 +2177,7 @@ export class Create {
 			game.check();
 
 			const selectables = get.selectableCards();
-			// @ts-expect-error 啊至少垫片函数是接受数组的喵
+			// @ts-expect-error 啊，还是直接变成Set喵
 			const cards = selecteds.length ? [...new Set(selectables).difference(new Set(selecteds))] : selectables;
 
 			if (cards.length <= range[1]) {
@@ -2244,7 +2244,7 @@ export class Create {
 			game.check();
 
 			const selectables = get.selectableButtons();
-			// @ts-expect-error 啊至少垫片函数是接受数组的喵
+			// @ts-expect-error 啊直接变成set更好喵
 			const buttons = selecteds.length ? [...new Set(selectables).difference(new Set(selecteds))] : selectables;
 
 			if (buttons.length <= range[1]) {
